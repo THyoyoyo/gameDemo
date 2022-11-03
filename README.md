@@ -3,4 +3,4 @@
 
 
 拼图游戏
-URL：
+URL：https://thyoyoyo.github.io/gameDemo/pt/index.html
