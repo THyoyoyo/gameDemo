@@ -11,5 +11,5 @@ URL：https://thyoyoyo.github.io/gameDemo/pt/index.html
 蛇
 URL：https://thyoyoyo.github.io/gameDemo/se/index.html
 
-蛇
+球
 URL：https://thyoyoyo.github.io/gameDemo/ball/index.html
