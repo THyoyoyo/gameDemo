@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #app {
+            padding: 10px;
+        }
+
+        #map {
+            width: 200px;
+            height: 200px;
+            display: flex;
+            flex-wrap: wrap;
+            box-sizing: border-box;
+            border-left: 1px solid rgb(211, 211, 211);
+            border-top: 1px solid rgb(211, 211, 211);
+            user-select: none;
+        }
+
+        .map-item {
+            position: relative;
+            width: 25%;
+            height: 25%;
+            text-align: center;
+            line-height: 50px;
+            font-size: 20px;
+            color: rgb(77, 77, 77);
+            font-weight: 700;
+            background: rgb(247, 247, 247);
+            border-right: 1px solid rgb(211, 211, 211);
+            border-bottom: 1px solid rgb(211, 211, 211);
+            box-sizing: border-box;
+        }
+
+        .map-item i {
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            opacity: 0.8;
+            line-height: normal;
+            font-size: 14px;
+            color: rgb(211, 211, 211);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div id="map"></div>
+    </div>
+</body>
+
+<script>
+
+    class uilts {
+
+        constructor() {
+
+        }
+        // 返回随机 2 - 4 -8
+        getRandom2And8() {
+            let randomNum = Math.floor(Math.random() * 10)
+
+            if (randomNum <= 4) {
+                return 2
+            }
+
+            if (randomNum >= 5 && randomNum <= 7) {
+                return 4
+            }
+
+            if (randomNum >= 8 && randomNum <= 9) {
+                return 8
+            }
+        }
+
+        //随机区间数 
+        randomMaxOrMin(min, max) {
+            return Math.floor(Math.random() * (max - min)) + min;
+        }
+
+    }
+
+
+
+
+
+
+
+
+
+    class game2048 extends uilts {
+        downClientX;
+        downClientY;
+        constructor() {
+            super()
+            this.changeMousedown = this.changeMousedown.bind(this);
+            this.changeMouseup = this.changeMouseup.bind(this);
+            this.init()
+        }
+        // 初始化
+        init() {
+            // let test = [4, 4, 8, 4, 4, 4, 2, 4, 8, 4, 2, 2, 2, 4, 2, 2] //调试
+            // 创建Map
+            Array.from(new Array(16)).map((v, k) => {
+                let div = document.createElement('div')
+                div.classList.add("map-item")
+                // div.innerText = test[k]  //调试
+                div.setAttribute("key", k)
+                div.id = `item-id-${k}`
+                document.querySelector("#map").append(div)
+            })
+            this.createNum()
+            this.initChangeMouse()
+        }
+
+        //  创建模块（2、4、8）
+        createNum() {
+            let maps = this.getMaps();
+            let filterMap = []
+            maps.forEach((v, k) => {
+                if (v.innerText == "") {
+                    filterMap.push(v)
+                }
+            })
+            if (filterMap.length <= 0) {
+                return alert("无法创建")
+            }
+            let index = this.randomMaxOrMin(0, filterMap.length - 1)
+            let randomNum = this.getRandom2And8()
+            filterMap[index].innerText = randomNum
+        }
+        // 获取Maps
+        getMaps() {
+            return document.querySelectorAll(".map-item")
+        }
+        //  初始化鼠标监听鼠标移动方向
+        initChangeMouse() {
+            document.querySelector("#map").addEventListener("mousedown", this.changeMousedown)
+            document.querySelector("#map").addEventListener("mouseup", this.changeMouseup)
+        }
+        //  鼠标按下
+        changeMousedown(e) {
+            let { clientX, clientY } = e
+            this.downClientX = clientX
+            this.downClientY = clientY
+            document.querySelector("#map").addEventListener("mouseleave", this.changeMouseup)
+        }
+        // 鼠标抬起
+        changeMouseup(e) {
+            document.querySelector("#map").removeEventListener("mouseleave", this.changeMouseup)
+
+            let { clientX, clientY } = e
+
+            switch (true) {
+                case this.downClientX - clientX > 0 && Math.abs(this.downClientX - clientX) > 35:
+                    console.log("------向左------");
+                    this.numMerge("left")
+                    break;
+                case this.downClientX - clientX < 0 && Math.abs(this.downClientX - clientX) > 35:
+                    console.log("------向右------");
+                    this.numMerge("rigth")
+                    break;
+                case this.downClientX - clientY > 0 && Math.abs(this.downClientY - clientY) > 35:
+                    console.log("------向上------");
+                    this.numMerge("up")
+                    break;
+                case this.downClientX - clientY < 0 && Math.abs(this.downClientY - clientY) > 35:
+                    console.log("------向下------");
+                    this.numMerge("down")
+                    break;
+                default:
+                    console.log("***无效***");
+                    break;
+            }
+        }
+        // 计算合并
+        numMerge(types) {
+            let parameter = {
+                up: {
+                    ids: [0, 1, 2, 3],
+                    type: "+",
+                    rule: 4
+                },
+                down: {
+                    ids: [12, 13, 14, 15],
+                    type: "-",
+                    rule: 4
+                },
+                left: {
+                    ids: [0, 4, 8, 12],
+                    type: "+",
+                    rule: 1
+                },
+                rigth: {
+                    ids: [3, 7, 11, 15],
+                    type: "-",
+                    rule: 1
+                }
+            }
+            let { ids, type, rule } = parameter[types]
+            ids.forEach(v => {
+                let firstNode = document.querySelector(`#item-id-${v}`)
+
+                for (let index = 1; index <= 3; index++) {
+
+                    // 当前
+                    let subId = type == '-' ? v - index * rule : v + index * rule
+                    let subNode = document.querySelector(`#item-id-${subId}`)
+                    if (subNode.innerText == "") continue;
+
+
+                    let superiorsIdArr = []
+                    for (let _index = 1; _index <= index; _index++) {
+                        // 当前的上级
+                        let superiorsId = type == '+' ? subId - rule * _index : subId + rule * _index
+                        superiorsIdArr.push(superiorsId)
+                        let superiorsNode = document.querySelector(`#item-id-${superiorsId}`)
+                        if (_index <= 1) {
+                            if (superiorsNode.innerText == "") {
+                                superiorsNode.innerText = subNode.innerText
+                                subNode.innerText = ""
+                            } else if (superiorsNode.innerText == subNode.innerText) {
+                                superiorsNode.innerText = superiorsNode.innerText * 2 == 0 ? "" : superiorsNode.innerText * 2
+                                subNode.innerText = ""
+                            }
+                        } else if (_index > 1) {
+                            let upNode = document.querySelector(`#item-id-${superiorsIdArr[_index - 2]}`)
+                            if (superiorsNode.innerText == "") {
+                                superiorsNode.innerText = upNode.innerText
+                                upNode.innerText = ""
+                            }
+                            if (superiorsNode.innerText == upNode.innerText) {
+                                superiorsNode.innerText = superiorsNode.innerText * 2 == 0 ? "" : superiorsNode.innerText * 2
+                                upNode.innerText = ""
+                            }
+                        }
+                    }
+                }
+            })
+            this.createNum()
+        }
+    }
+
+
+    let game = new game2048();
+</script>
+
+</html>
