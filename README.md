@@ -1,6 +1,8 @@
 # gameDemo
 无聊HTML游戏
 
+飞机大战（无敌版）
+URL：https://thyoyoyo.github.io/gameDemo/aircraft/index.html
 
 2048
 URL：https://thyoyoyo.github.io/gameDemo/2048/index.html
