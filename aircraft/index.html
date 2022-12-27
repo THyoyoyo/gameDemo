@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #app {
+            padding: 10px;
+        }
+
+        #map {
+            overflow: hidden;
+            position: relative;
+            width: 203px;
+            height: 303px;
+            border: 1px solid rgb(194, 194, 194);
+        }
+
+        /* 自己 */
+        #oneself {
+            position: absolute;
+            bottom: 5px;
+            left: calc(50% - 17.5px);
+            width: 35px;
+            height: 32px;
+            background-image: url("./img-2.png");
+            background-size: 100%;
+            background-repeat: no-repeat;
+            background-position: 0px -1px;
+            z-index: 2;
+        }
+
+        .oneself-bullet {
+            position: absolute;
+            bottom: 155px;
+            width: 8px;
+            height: 17px;
+            background-image: url("./img-4.png");
+            background-size: 100%;
+            background-repeat: no-repeat;
+        }
+
+        /* 敌人 */
+        .enemy {
+            filter: grayscale(1);
+            z-index: 1;
+            position: absolute;
+            top: -28px;
+            width: 35px;
+            height: 28px;
+            background-image: url("./img-1.png");
+            background-size: 100%;
+            background-repeat: no-repeat;
+            transform: rotate(180deg);
+            background-position: 0px -1px;
+            opacity: 1;
+        }
+
+        .disappear {
+            transition: all 0.25s;
+            opacity: 0;
+            transform: scale(0) !important;
+        }
+
+        .enemy-bullet {
+            opacity: 1;
+            position: absolute;
+            width: 10px;
+            height: 18px;
+            background-image: url("./img-3.png");
+            background-size: 100%;
+            background-repeat: no-repeat;
+            background-position: 0px -1px;
+
+        }
+    </style>
+
+
+
+</head>
+
+<body>
+
+    <div id="app">
+        <div id="map">
+
+        </div>
+    </div>
+
+</body>
+
+<script>
+
+    class Aircraft {
+        mapNode;
+        // 玩家子弹
+        bulletNodes = [];
+        bulletNodeKey = 0
+        // 敌人
+        enemyNodes = []
+        enemyNodekey = 0;
+        // 敌人子弹
+        enemyBulletNodes = [];
+        enemyBulletKey = 0
+        constructor() {
+            this.keyboardPress = this.keyboardPress.bind(this);
+            this.init()
+        }
+        //   初始
+        init() {
+            this.mapNode = document.querySelector("#map")
+            this.createOneselfNode()
+            this.keyboardChanges()
+            this.monitorTheBulletToGenerateMovement()
+            this.generateEnemies()
+            this.monitorTheEnemyToGenerateMovement()
+            this.generateEnemyBulletsRandomly()
+            this.enemyBombMovement()
+        }
+        //  创建自己
+        createOneselfNode() {
+            let oneselfNode = document.createElement("div")
+            oneselfNode.id = "oneself"
+            this.mapNode.append(oneselfNode)
+        }
+        // 监听键盘
+        keyboardChanges() {
+            window.addEventListener("keydown", this.keyboardPress)
+
+        }
+        // 根据键盘Code触发
+        keyboardPress(e) {
+            let { keyCode } = e
+
+            // 移动
+            if (keyCode == 38 || keyCode == 40 || keyCode == 37 || keyCode == 39) this.controlMovement(keyCode)
+
+            // 开火
+            if (keyCode == 32) this.createBullet()
+        }
+
+        // 根据code做出移动
+        controlMovement(code) {
+            let oneselfNode = document.querySelector("#oneself")
+            let styleObj = this.getStyle(oneselfNode, ["bottom", "left"])
+            if (code == 38) {
+                if (styleObj.bottom > 265) return
+                oneselfNode.style.bottom = `${parseInt(styleObj.bottom) + 5}px`
+            }
+
+            if (code == 40) {
+                if (styleObj.bottom <= 0) return
+                oneselfNode.style.bottom = `${parseInt(styleObj.bottom) - 5}px`
+            }
+
+            if (code == 37) {
+                if (styleObj.left <= 0) return
+                oneselfNode.style.left = `${parseInt(styleObj.left) - 5}px`
+            }
+
+            if (code == 39) {
+                if (styleObj.left > 165) return
+                oneselfNode.style.left = `${parseInt(styleObj.left) + 5}px`
+            }
+        }
+
+        // 创建子弹
+        createBullet() {
+            let oneselfNode = document.querySelector("#oneself")
+            let styleObj = this.getStyle(oneselfNode, ["bottom", "left"])
+            let bulletNode = document.createElement("div")
+            bulletNode.id = 'bullet-' + this.bulletNodeKey
+            bulletNode.classList.add("oneself-bullet")
+            bulletNode.style.left = `${parseInt(styleObj.left) + 13}px`
+            bulletNode.style.bottom = `${parseInt(styleObj.bottom) + 35}px`
+            this.mapNode.append(bulletNode)
+            this.bulletNodes.push(bulletNode)
+            this.bulletNodeKey++
+        }
+
+        //  监听子弹创建=>移动=>子弹判定
+        monitorTheBulletToGenerateMovement() {
+            setInterval(() => {
+                this.bulletNodes.forEach((v, k) => {
+                    if (v != null && v != undefined) {
+                        let node = this.getStyle(v, ["bottom"])
+                        // 超出边界
+                        if (node.bottom > 300) {
+                            this.bulletNodes.splice(k, 1)
+                            v.remove()
+                        }
+                        // 子弹判断
+                        let z_top = v.offsetTop
+                        let z_left = v.offsetLeft
+                        this.enemyNodes.forEach((_v, _k) => {
+                            let e_top = _v.offsetTop
+                            let e_left = _v.offsetLeft
+
+                            if (z_top > e_top - 28 && z_top - 8 < e_top && z_left + 8 > e_left && z_left < e_left + 35) {
+                                this.bulletNodes.splice(k, 1)
+                                this.enemyNodes.splice(_k, 1)
+                                v.classList.add("disappear")
+                                _v.classList.add("disappear")
+                                setTimeout(() => {
+                                    _v.remove()
+                                    v.remove()
+                                }, 300);
+
+                            }
+                        })
+                        v.style.bottom = `${parseInt(node.bottom) + 1}px`
+                    }
+                })
+            }, 10);
+        }
+
+        // 生成敌人
+        generateEnemies() {
+            setInterval(() => {
+                let enemyNode = document.createElement("div")
+                enemyNode.id = 'enemy-' + this.enemyNodekey
+                enemyNode.classList.add("enemy")
+                enemyNode.style.left = this.random(0, this.mapNode.clientWidth - 32)
+                this.mapNode.append(enemyNode)
+                this.enemyNodes.push(enemyNode)
+                this.enemyNodekey++
+            }, 2000);
+
+        }
+
+        // 监听敌人生成移动
+        monitorTheEnemyToGenerateMovement() {
+            setInterval(() => {
+                this.enemyNodes.forEach((v, k) => {
+                    if (v != null && v != undefined) {
+                        let node = this.getStyle(v, ["top"])
+                        // 超出边界
+                        if (node.top > 300) {
+                            this.enemyNodes.splice(k, 1)
+                            v.remove()
+                        }
+                        v.style.top = `${parseInt(node.top) + 1}px`
+                    }
+                })
+            }, 30);
+        }
+
+
+        //随机生成敌人子弹
+        generateEnemyBulletsRandomly() {
+            setInterval(() => {
+                if (this.enemyNodes.length > 0) {
+                    let index = this.random(0, this.enemyNodes.length - 1).match(/(\S*)px/)[1]
+                    let enemyNode = this.enemyNodes[index]
+
+                    let styleObj = this.getStyle(enemyNode, ["bottom", "left", "top"])
+
+                    if (styleObj.top > 10) {
+                        let bulletNode = document.createElement("div")
+                        bulletNode.id = 'enemy-bullet-' + this.enemyBulletKey
+                        bulletNode.classList.add("enemy-bullet")
+                        bulletNode.style.left = `${parseInt(styleObj.left) + 13}px`
+                        bulletNode.style.bottom = `${parseInt(styleObj.bottom)}px`
+                        this.mapNode.append(bulletNode)
+                        this.enemyBulletNodes.push(bulletNode)
+
+
+                        let atNode = document.querySelector(`#enemy-bullet-${this.enemyBulletKey}`)
+                        this.setAngle(atNode)
+                        //  移动
+                        let oneself = document.querySelector("#oneself")
+                        let oneselfStyleObj = this.getStyle(oneself, ["bottom", "left",])
+                        atNode.style.transition = 'all 2s linear'
+
+
+                        atNode.style.left = `${parseInt(oneselfStyleObj.left)}px`
+                        atNode.style.bottom = `${parseInt(oneselfStyleObj.bottom)}px`
+                        atNode.addEventListener('transitionend', function () {
+                            atNode.style.transition = 'all 0.5s linear'
+                            atNode.style.opacity = 0
+                        });
+
+                        this.enemyBulletKey++
+                    }
+
+                }
+
+
+
+            }, 500);
+        }
+
+
+        // 敌人子弹移动
+        enemyBombMovement() {
+            setInterval(() => {
+
+                this.enemyBulletNodes.forEach((v, k) => {
+
+
+
+                })
+
+            }, 40)
+
+        }
+
+        //  设置敌人炸弹角度
+        setAngle(node) {
+            var elementA = node;
+            var elementB = document.querySelector("#oneself");
+            var rectA = elementA.getBoundingClientRect();
+            var rectB = elementB.getBoundingClientRect();
+            var x = rectA.left - rectB.left;
+            var y = rectA.top - rectB.top;
+            var angle = Math.atan2(y, x) * 180 / Math.PI
+            elementA.style.transform = `rotate(${angle + 90}deg)`
+        }
+
+        // 获取节点
+        getNode(name, type) {
+            if (type == 'all') {
+                return document.querySelectorAll(name)
+            } else {
+                return document.querySelector(name)
+            }
+
+        }
+
+        // 获取指定接单样式
+        getStyle(node, styles) {
+            let obj = {}
+            styles.forEach(v => {
+                obj[v] = getComputedStyle(node)[v].match(/(\S*)px/) != null ? getComputedStyle(node)[v].match(/(\S*)px/)[1] : getComputedStyle(node)[v]
+            });
+            return obj
+        }
+
+        // 根据最小最大 获取随机值
+        random(min, max) {
+            return (Math.floor(Math.random() * (max - min)) + min) + "px";
+        }
+
+    }
+
+    new Aircraft();
+
+</script>
+
+</html>
